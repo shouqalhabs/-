@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>رحلة النور — خريطة المدينة</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;500;600&family=Reem+Kufi:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg1:#060B16;
+    --bg2:#0B1526;
+    --ink:#EAF0FA;
+    --muted:#8FA0B8;
+    --hair:rgba(255,255,255,.08);
+    --card:#101B30;
+    --gold:#FFD166;
+    --jade:#3DDC97;
+    --clay:#FF6B6B;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    margin:0;color:var(--ink);
+    background:linear-gradient(180deg,var(--bg1),var(--bg2));
+    font-family:"IBM Plex Sans Arabic","Noto Sans Arabic","Segoe UI",Tahoma,Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;overflow:hidden;
+  }
+  button{font:inherit;color:inherit}
+  :focus-visible{outline:2px solid var(--gold);outline-offset:3px;border-radius:8px}
+
+  .app{direction:rtl;position:relative;height:100dvh;min-height:540px;display:grid;grid-template-rows:auto 1fr auto;overflow:hidden}
+
+  /* ── الشريط العلوي ── */
+  .hud{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:14px clamp(14px,4vw,34px);position:relative;z-index:6}
+  .brand h1{font-family:"Reem Kufi","Noto Kufi Arabic",Tahoma,sans-serif;margin:0;font-size:clamp(19px,3.4vw,26px);font-weight:600;letter-spacing:.4px}
+  .brand h1 .spark{color:var(--gold)}
+  .brand p{margin:2px 0 0;font-size:12px;color:var(--muted)}
+  .meters{display:flex;gap:clamp(12px,2.6vw,26px)}
+  .meter{text-align:center;line-height:1.15}
+  .meter b{display:block;font-size:clamp(16px,3vw,21px);font-weight:600;font-variant-numeric:tabular-nums}
+  .meter small{font-size:10.5px;color:var(--muted);letter-spacing:.5px}
+  .meter.pt b{color:var(--gold)}
+  .meter.lit b{color:var(--jade)}
+
+  /* ── الخريطة ── */
+  .scene{position:relative;overflow:hidden;display:grid;place-items:center;padding:4px clamp(10px,2vw,24px) 10px}
+  .map{width:100%;height:100%;max-width:1250px;display:block}
+  .map .ground{fill:#0A1120}
+  .map .road{fill:#0E1830}
+  .map .dash{stroke:#1D2C4C;stroke-width:2;stroke-dasharray:14 16;fill:none}
+  .map .base{fill:#0F1930;stroke:rgba(255,255,255,.05);stroke-width:1.5;transition:fill 1s ease,stroke 1s ease}
+  .map g.zone{cursor:pointer}
+  .map g.zone:hover .base{fill:#142140}
+
+  /* مراحل التحول من الليل إلى الصباح */
+  .map g.zone.s1 .base, .map g.zone.s1:hover .base{fill:#22305E}
+  .map g.zone.s1 .roof{fill:#31427A}
+  .map g.zone.s1 .court{fill:#2A3968}
+  .map g.zone.s2 .base, .map g.zone.s2:hover .base{fill:#585684}
+  .map g.zone.s2 .roof{fill:#7472A8}
+  .map g.zone.s2 .court{fill:#67659A}
+  .map g.zone.s2 .ac{fill:#4A4870}
+  .map g.zone.s3 .base, .map g.zone.s3:hover .base{fill:#F0E6CB;stroke:rgba(201,135,60,.65);stroke-width:2.5}
+  .map g.zone.s3 .roof{fill:#FBF4E2}
+  .map g.zone.s3 .ac{fill:#D9C9A4}
+  .map g.zone.s3 .court{fill:#E7D9B4}
+  .map g.zone.s3 .dome{fill:#FFD166;stroke:#C9873C}
+  .map g.zone.s3 .crescent{stroke:#8A5A1F;filter:none}
+  .map g.zone.s3 .minar{fill:#E2C275;stroke:#C9873C}
+  .map g.zone.s3 .lamp{opacity:0}
+  .map g.zone.s3 .dlabel{fill:#7A5B18}
+  .map g.zone.s3 .dsub{fill:#9C8340}
+  .map g.zone.s3 .check{opacity:1;fill:#B8741E}
+  .map .roof{fill:#182642;transition:fill 1s ease}
+  .map .ac{fill:#101A2E;transition:fill 1s ease}
+  .map .lamp{fill:#243559;transition:fill .45s ease,r .45s ease,opacity 1.2s ease}
+  .map .lamp.lit{
+    fill:#FFF3C4;r:4.5;
+    filter:drop-shadow(0 0 5px rgba(255,230,150,1)) drop-shadow(0 0 12px rgba(255,205,95,.9)) drop-shadow(0 0 26px rgba(255,180,70,.55));
+  }
+  .map .halo{opacity:0;transition:opacity 1.2s ease;pointer-events:none}
+  .map .court{fill:#131F3A;stroke:rgba(255,255,255,.05);transition:fill 1s ease}
+  .map .dome{fill:#1B2A4A;stroke:rgba(255,255,255,.08);stroke-width:1.5;transition:fill 1s ease,stroke 1s ease}
+  .map .crescent{fill:none;stroke:#2A3B5E;stroke-width:2.6;transition:stroke 1s ease}
+  .map .minar{fill:#1B2A4A;stroke:rgba(255,255,255,.07);transition:fill 1s ease,stroke 1s ease}
+  .dlabel{font-family:"Reem Kufi",Tahoma,sans-serif;font-size:26px;fill:#C3CFE4;text-anchor:middle;pointer-events:none;transition:fill 1s ease}
+  .dsub{font-size:14px;fill:#5F718F;text-anchor:middle;pointer-events:none;font-family:"IBM Plex Sans Arabic",Tahoma,sans-serif;transition:fill 1s ease}
+  .map .check{font-size:30px;text-anchor:middle;fill:var(--gold);opacity:0;transition:opacity .6s ease;pointer-events:none}
+  .compass{fill:none;stroke:#31415f;stroke-width:2}
+  .compass-t{font-family:"Reem Kufi",Tahoma,sans-serif;font-size:17px;fill:#4A5B7C;text-anchor:middle;pointer-events:none}
+
+  /* ── الشريط السفلي ── */
+  .deck{position:relative;z-index:6;display:grid;gap:10px;justify-items:center;padding:0 clamp(14px,4vw,34px) clamp(14px,2.6vh,24px)}
+  .hint{font-size:12.5px;color:var(--muted)}
+  .chips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center}
+  .chip{
+    display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:999px;cursor:pointer;
+    border:1px solid var(--hair);background:rgba(255,255,255,.04);color:var(--ink);font-size:13px;
+    transition:transform .18s ease,border-color .3s ease,background .3s ease;
+  }
+  .chip:hover{transform:translateY(-2px);border-color:rgba(255,255,255,.22)}
+  .chip.full{border-color:var(--gold);background:rgba(255,209,102,.09)}
+  .dots{display:flex;gap:4px}
+  .dot{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.14)}
+  .dot.ok{background:var(--jade)}
+  .dot.no{background:var(--clay)}
+
+  /* ── ورقة السؤال ── */
+  .scrim{position:absolute;inset:0;z-index:8;background:rgba(4,8,16,.55);backdrop-filter:blur(3px);opacity:0;pointer-events:none;transition:opacity .3s ease}
+  .scrim.open{opacity:1;pointer-events:auto}
+  .sheet{
+    position:absolute;z-index:9;left:0;right:0;bottom:0;margin:0 auto;width:min(700px,100%);
+    background:var(--card);border:1px solid var(--hair);border-bottom:0;border-radius:24px 24px 0 0;
+    box-shadow:0 -22px 60px rgba(0,0,0,.5);
+    padding:20px clamp(16px,4vw,30px) clamp(18px,3vh,26px);
+    transform:translateY(103%);transition:transform .4s cubic-bezier(.22,.72,.24,1);
+    max-height:92%;overflow-y:auto;
+  }
+  .sheet::before{content:"";display:block;width:44px;height:4px;border-radius:99px;background:rgba(255,255,255,.16);margin:-8px auto 14px}
+  .sheet.open{transform:translateY(0)}
+  .sheet-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px}
+  .tag{font-size:11.5px;letter-spacing:1.5px;font-weight:600;padding:6px 13px;border-radius:999px;color:#0A1425;background:var(--gold)}
+  .qnum{font-size:12px;color:var(--muted)}
+  .close{width:34px;height:34px;border-radius:50%;border:1px solid var(--hair);background:transparent;cursor:pointer;color:var(--muted);font-size:16px;line-height:1}
+  .close:hover{color:var(--ink);border-color:rgba(255,255,255,.3)}
+  .q{font-family:"Reem Kufi",Tahoma,sans-serif;font-size:clamp(18px,3.4vw,22px);line-height:1.7;margin:0 0 18px}
+  .opts{display:grid;gap:10px}
+  .opt{
+    text-align:right;border:1px solid var(--hair);background:rgba(255,255,255,.035);
+    border-radius:14px;padding:13px 16px;cursor:pointer;font-size:15px;line-height:1.6;
+    transition:border-color .2s ease,background .2s ease,transform .15s ease;
+  }
+  .opt:hover:not([disabled]){border-color:rgba(255,255,255,.28);transform:translateY(-1px)}
+  .opt[disabled]{cursor:default;opacity:.75}
+  .opt.right{border-color:var(--jade);background:rgba(61,220,151,.12);opacity:1}
+  .opt.wrong{border-color:var(--clay);background:rgba(255,107,107,.12);opacity:1}
+  .verdict{display:none;margin-top:16px;padding:14px 16px;border-radius:14px;font-size:14px;line-height:1.8}
+  .verdict.show{display:block}
+  .verdict.good{background:rgba(61,220,151,.1);border:1px solid rgba(61,220,151,.35)}
+  .verdict.bad{background:rgba(255,107,107,.09);border:1px solid rgba(255,107,107,.3)}
+  .verdict b{display:block;font-family:"Reem Kufi",Tahoma,sans-serif;font-size:16px;margin-bottom:4px}
+  .nextbtn{
+    display:none;margin:16px auto 0;border:0;background:var(--gold);color:#0A1425;
+    border-radius:999px;padding:12px 34px;cursor:pointer;font-family:"Reem Kufi",Tahoma,sans-serif;font-size:16px;font-weight:600;
+    transition:transform .18s ease;
+  }
+  .nextbtn.show{display:block}
+  .nextbtn:hover{transform:translateY(-2px)}
+
+  /* ── التنبيه ── */
+  .toast{
+    position:absolute;z-index:7;top:16px;left:50%;transform:translate(-50%,-70px);
+    background:var(--card);border:1px solid var(--hair);border-radius:999px;
+    padding:10px 22px;font-size:13.5px;transition:transform .4s cubic-bezier(.22,.72,.24,1);pointer-events:none;
+  }
+  .toast.show{transform:translate(-50%,0)}
+
+  /* ── شاشة النهاية ── */
+  .finale{
+    position:absolute;inset:0;z-index:10;display:grid;place-items:center;
+    background:rgba(4,8,16,.72);backdrop-filter:blur(4px);
+    opacity:0;pointer-events:none;transition:opacity .5s ease;
+  }
+  .finale.open{opacity:1;pointer-events:auto}
+  .fcard{
+    text-align:center;background:var(--card);border:1px solid var(--hair);border-radius:26px;
+    padding:clamp(26px,5vw,44px) clamp(22px,6vw,56px);max-width:min(460px,90vw);
+    box-shadow:0 30px 90px rgba(0,0,0,.55);
+  }
+  .fcard .big{font-size:52px;line-height:1;margin-bottom:8px}
+  .fcard h2{font-family:"Reem Kufi",Tahoma,sans-serif;margin:0 0 6px;font-size:clamp(22px,5vw,30px);color:var(--gold)}
+  .fcard p{margin:0 0 4px;color:var(--muted);font-size:14px;line-height:1.8}
+  .fscore{font-size:clamp(30px,7vw,42px);font-weight:600;color:var(--ink);margin:12px 0 2px;font-variant-numeric:tabular-nums}
+  .again{
+    margin-top:20px;border:1px solid var(--gold);background:transparent;color:var(--gold);
+    border-radius:999px;padding:12px 34px;cursor:pointer;font-family:"Reem Kufi",Tahoma,sans-serif;font-size:16px;
+    transition:background .2s ease,color .2s ease;
+  }
+  .again:hover{background:var(--gold);color:#0A1425}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="hud">
+    <div class="brand">
+      <h1>رحلة <span class="spark">النور</span> ✦</h1>
+      <p>لعبة الوعي الفكري — أجب صح حتى يشرق الصبح على المدينة</p>
+    </div>
+    <div class="meters">
+      <div class="meter pt"><b id="mScore">0</b><small>نقاط</small></div>
+      <div class="meter lit"><b id="mLit">0/6</b><small>أحياء أشرقت</small></div>
+      <div class="meter"><b id="mQ">0/18</b><small>أسئلة</small></div>
+    </div>
+  </header>
+
+  <main class="scene" id="scene">
+    <svg class="map" id="map" viewBox="0 0 800 1200" preserveAspectRatio="xMidYMid meet" aria-label="خريطة مدينة الوعي"></svg>
+
+    <div class="toast" id="toast"></div>
+
+    <div class="scrim" id="scrim"></div>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="qText">
+      <div class="sheet-head">
+        <span class="tag" id="qTag"></span>
+        <span class="qnum" id="qNum"></span>
+        <button class="close" id="qClose" aria-label="إغلاق">✕</button>
+      </div>
+      <h2 class="q" id="qText"></h2>
+      <div class="opts" id="qOpts"></div>
+      <div class="verdict" id="qVerdict"></div>
+      <button class="nextbtn" id="qNext">متابعة</button>
+    </section>
+
+    <div class="finale" id="finale">
+      <div class="fcard">
+        <div class="big" id="fEmoji">🌟</div>
+        <h2 id="fTitle">أضأت مدينة الوعي!</h2>
+        <div class="fscore" id="fScore"></div>
+        <p id="fMsg"></p>
+        <button class="again" id="fAgain">العب من جديد</button>
+      </div>
+    </div>
+  </main>
+
+  <footer class="deck">
+    <div class="hint">هذه مدينة الوعي نائمة في الليل — اضغط على أي حيّ ليظهر سؤاله ✦ كل إجابة صحيحة تقرّب الفجر، وبثلاث إجابات يشرق الصبح على الحي ☀️</div>
+    <div class="chips" id="chips"></div>
+  </footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* ─────────── البيانات ─────────── */
+const DISTRICTS = [
+  {
+    id:"news", name:"حي التحقق", theme:"التحقق من الأخبار", tint:"#4FC3F7",
+    questions:[
+      {q:"وصلك في واتساب خبرٌ مثير بلا مصدر، وينتهي بعبارة «انشرها قبل الحذف». ما التصرف الصحيح؟",
+       o:["أنشره فورًا لأن الموضوع مهم","أتحقق من المصادر الرسمية قبل التصديق أو النشر","أرسله لأهلي فقط دون بقية الناس","أحفظه عندي وأنشره لاحقًا"], a:1,
+       why:"عبارة «انشرها قبل الحذف» من أشهر علامات الشائعات؛ الخبر الصحيح يصمد ولا يخاف من التحقق. المصدر الرسمي هو الفيصل."},
+      {q:"أيٌّ من التالي يُعد مصدرًا موثوقًا للتحقق من خبر يخص السعودية؟",
+       o:["مقطع متداول في المجموعات","حساب مجهول كثير المتابعين","الحسابات الرسمية للجهات الحكومية ووكالة الأنباء السعودية (واس)","تعليقات الناس تحت المنشور"], a:2,
+       why:"الجهات الرسمية والمتحدثون الرسميون هم المصدر المعتمد؛ كثرة المتابعين أو الانتشار لا تعني الصحة."},
+      {q:"ما أبرز علامات الخبر المفبرك؟",
+       o:["ذكر المصدر والتاريخ بوضوح","لغة هادئة وأرقام دقيقة","عنوان مثير بلا مصدر ولا تاريخ ويستعجل النشر","صدوره من جهة معروفة"], a:2,
+       why:"الإثارة المبالغ فيها، وغياب المصدر والتاريخ، واستعجال النشر — مثلث الفبركة الكلاسيكي."},
+    ]
+  },
+  {
+    id:"logic", name:"حي المنطق", theme:"المغالطات المنطقية", tint:"#CE93D8",
+    questions:[
+      {q:"قال لك أحدهم في نقاش: «أنت صغير في السن، فلا يحق لك إبداء رأيك». أي مغالطة استخدم؟",
+       o:["رجل القش","الشخصنة — مهاجمة الشخص بدل الفكرة","الاحتكام إلى الأغلبية","السبب الزائف"], a:1,
+       why:"بدل مناقشة الفكرة نفسها هاجم صاحبها (عمره)؛ قيمة الرأي في دليله لا في عمر قائله."},
+      {q:"«كل الناس يقولون هذا الكلام، إذن هو صحيح بالتأكيد». ما اسم هذه المغالطة؟",
+       o:["الاحتكام إلى الأغلبية","التعميم المتسرع","الاحتكام إلى القدم","الرنجة الحمراء"], a:0,
+       why:"انتشار الفكرة لا يجعلها صحيحة؛ فقد يتفق كثيرون على خطأ. الحكم يكون بالدليل لا بعدد القائلين."},
+      {q:"حرّف زميلك كلامك ثم أخذ يرد على الكلام المحرّف لا على ما قلته فعلًا. هذه مغالطة:",
+       o:["الاحتكام إلى العاطفة","المنحدر الزلق","رجل القش","التجربة الشخصية"], a:2,
+       why:"«رجل القش»: يبني خصمك نسخة مشوّهة سهلة الهدم من كلامك ثم يهدمها، وكأنه رد عليك."},
+    ]
+  },
+  {
+    id:"wasat", name:"حي الوسطية", theme:"الوسطية والاعتدال", tint:"#3DDC97",
+    questions:[
+      {q:"ما المقصود بالوسطية؟",
+       o:["ترك الالتزام بالمبادئ","الاعتدال دون إفراط ولا تفريط","مجاراة كل رأي جديد","التشدد في الأمور كلها"], a:1,
+       why:"الوسطية توازن: لا غلو ولا تساهل؛ وهي منهج ديننا وقيمة راسخة في مجتمعنا."},
+      {q:"زميلك يخالفك الرأي في قضية عامة. ما التصرف الواعي؟",
+       o:["أقاطعه وأشوّه سمعته","أحترم رأيه وأحاوره بالأدلة والأدب","أرفع صوتي حتى يسكت","أنشر رأيه بين الناس للسخرية منه"], a:1,
+       why:"الاختلاف في الرأي طبيعي؛ الوعي الفكري يظهر في الحوار المحترم المبني على الحجة لا في الإقصاء."},
+      {q:"أيٌّ من التالي يُعد من صور الغلو والتطرف الفكري؟",
+       o:["الحوار مع المخالف","قبول التنوع داخل المجتمع","تصنيف المخالفين وإقصاؤهم واحتقارهم","التثبت قبل إصدار الأحكام"], a:2,
+       why:"التطرف يبدأ فكرةً: إقصاء الآخر واحتقاره وتصنيفه، وقد يتدرج إلى ما هو أخطر. الوعي يقطع الطريق عليه مبكرًا."},
+    ]
+  },
+  {
+    id:"cyber", name:"حي الأمان", theme:"الأمن الرقمي", tint:"#FFB74D",
+    questions:[
+      {q:"وصلتك رسالة نصية: «حسابك البنكي سيوقف خلال ساعات، حدّث بياناتك عبر هذا الرابط». ما التصرف الصحيح؟",
+       o:["أضغط الرابط بسرعة قبل إيقاف الحساب","أرسل بياناتي ليتأكدوا من هويتي","لا أضغط الرابط وأبلغ عبر القنوات الرسمية للبنك","أعيد توجيه الرسالة لأصدقائي لتحذيرهم بالرابط"], a:2,
+       why:"هذا تصيد احتيالي؛ البنوك لا تطلب بياناتك برسائل وروابط. أسلوب التخويف والاستعجال علامة احتيال مؤكدة."},
+      {q:"أي كلمة مرور من التالية هي الأقوى؟",
+       o:["123456789","اسمك وسنة ميلادك","password","عبارة طويلة تجمع حروفًا وأرقامًا ورموزًا"], a:3,
+       why:"الطول والتنوع هما سر القوة؛ والمعلومات الشخصية (الاسم، الميلاد) أول ما يجرّبه المخترقون."},
+      {q:"قبل تحميل تطبيق غير معروف على جوالك، ما الخطوة الواعية؟",
+       o:["أحمّله من أي موقع يظهر في البحث","أتحقق أنه من المتجر الرسمي وأراجع تقييماته والأذونات التي يطلبها","أحمّله لأن صديقي أرسله لي","أوافق على كل الأذونات ليعمل بسرعة"], a:1,
+       why:"المتجر الرسمي + التقييمات + مراجعة الأذونات (لماذا تطلب آلة حاسبة الوصول لجهات اتصالك؟) = حماية حقيقية."},
+    ]
+  },
+  {
+    id:"digital", name:"حي المواطنة", theme:"المواطنة الرقمية", tint:"#F48FB1",
+    questions:[
+      {q:"التقطت صورة جماعية فيها زملاؤك وتريد نشرها. ما التصرف الصحيح؟",
+       o:["أنشرها فورًا فهي صورتي","أستأذن من يظهر فيها قبل النشر","أنشرها وأحذفها إذا اعترض أحد","أضع عليها ملصقات وأنشرها"], a:1,
+       why:"لكل إنسان حق في صورته وخصوصيته؛ الاستئذان قبل النشر أدب شرعي وذوق ونظام."},
+      {q:"رأيت حملة تنمر إلكتروني على زميل لك. ما موقف الواعي فكريًا؟",
+       o:["أتفرج فالموضوع لا يخصني","أشارك بتعليق ساخر خفيف","أساند زميلي وأبلغ عن المحتوى المسيء","أعيد نشر المقاطع لأريه ما يقال عنه"], a:2,
+       why:"الصمت مشاركة صامتة؛ الوعي أن تكون في صف المتضرر وتستخدم أدوات الإبلاغ الرسمية."},
+      {q:"نشر الشائعات والإساءة للآخرين عبر الإنترنت في المملكة يُعد:",
+       o:["حرية شخصية لا يحاسب عليها أحد","مجرد سلوك غير لائق فقط","جريمة معلوماتية يعاقب عليها النظام","مقبولًا إذا كان الحساب وهميًا"], a:2,
+       why:"نظام مكافحة الجرائم المعلوماتية يعاقب على التشهير ونشر الشائعات — والحساب الوهمي لا يحمي صاحبه."},
+    ]
+  },
+  {
+    id:"think", name:"حي التفكير", theme:"التفكير النقدي", tint:"#9FA8DA",
+    questions:[
+      {q:"ما الفرق بين الحقيقة والرأي؟",
+       o:["لا فرق بينهما","الحقيقة قابلة للتحقق بالدليل، والرأي وجهة نظر تختلف من شخص لآخر","الرأي أقوى من الحقيقة إذا قاله مشهور","الحقيقة هي ما يصدقه أكثر الناس"], a:1,
+       why:"«الرياض عاصمة السعودية» حقيقة تُتحقق؛ «الشتاء أجمل الفصول» رأي. التمييز بينهما أساس التفكير السليم."},
+      {q:"إعلان يقول: «منتج طبيعي يعالج جميع الأمراض نهائيًا!». ما موقف المفكر الناقد؟",
+       o:["أشتريه فالإعلان منتشر جدًا","أجربه فلن أخسر شيئًا","أشك في الادعاء وأطلب دليلًا علميًا؛ فالتعميم المطلق علامة تضليل","أنصح أهلي به احتياطًا"], a:2,
+       why:"كلمات مثل «جميع» و«نهائيًا» و«معجزة» إنذار مبكر؛ الادعاءات الكبيرة تحتاج أدلة كبيرة."},
+      {q:"أيّ عادة من التالية تنمّي التفكير النقدي؟",
+       o:["تصديق أول معلومة تصلني","طرح الأسئلة وفحص الأدلة قبل إصدار الحكم","متابعة رأي الأغلبية دائمًا","تجنب قراءة الآراء المخالفة"], a:1,
+       why:"السؤال هو مفتاح العقل: من قال؟ وما دليله؟ وهل هناك تفسير آخر؟ — بهذه الأسئلة يشتد عود الفكر."},
+    ]
+  },
+];
+
+/* ─────────── حالة اللعبة ─────────── */
+const state = {
+  score:0,
+  answered:0,
+  districts: DISTRICTS.map(() => ({correct:0, results:[], lamps:[]})),
+  current:null,
+};
+const TOTAL_Q = DISTRICTS.length * 3;
+
+function mulberry32(seed){
+  return function(){
+    seed |= 0; seed = seed + 0x6D2B79F5 | 0;
+    let t = Math.imul(seed ^ seed >>> 15, 1 | seed);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+/* ─────────── بناء الخريطة ─────────── */
+const SVGNS = "http://www.w3.org/2000/svg";
+const map = document.getElementById("map");
+const COLS = 2, ROWS = 3;
+
+function el(name, attrs){
+  const n = document.createElementNS(SVGNS, name);
+  for(const k in attrs) n.setAttribute(k, attrs[k]);
+  return n;
+}
+
+function pts(poly){ return poly.map(p => p[0].toFixed(1)+","+p[1].toFixed(1)).join(" "); }
+function centroid(poly){
+  let cx=0, cy=0;
+  poly.forEach(p => {cx+=p[0]; cy+=p[1];});
+  return [cx/poly.length, cy/poly.length];
+}
+function shrink(poly, k){
+  const [cx, cy] = centroid(poly);
+  return poly.map(p => [cx+(p[0]-cx)*k, cy+(p[1]-cy)*k]);
+}
+function inPoly(p, poly){
+  let inside = false;
+  for(let i=0, j=poly.length-1; i<poly.length; j=i++){
+    const xi=poly[i][0], yi=poly[i][1], xj=poly[j][0], yj=poly[j][1];
+    if((yi>p[1]) !== (yj>p[1]) && p[0] < (xj-xi)*(p[1]-yi)/(yj-yi)+xi) inside = !inside;
+  }
+  return inside;
+}
+
+(function buildMap(){
+  const rnd = mulberry32(42);
+
+  /* عقد الشبكة المشتركة — مع تعرّج حتى تطلع الأحياء معوجة لا مربعات */
+  const xs = [15, 400, 785], ys = [15, 405, 795, 1185];
+  const nodes = [];
+  for(let c=0; c<=COLS; c++){
+    nodes[c] = [];
+    for(let r=0; r<=ROWS; r++){
+      let x = xs[c], y = ys[r];
+      const inX = c>0 && c<COLS, inY = r>0 && r<ROWS;
+      if(inX) x += (rnd()-.5)*140;
+      if(inY) y += (rnd()-.5)*115;
+      // الحدود الخارجية تنجرّ للداخل بتفاوت — حتى ما تكون المدينة مستطيلًا
+      if(!inX) x += (c===0 ? 1 : -1) * rnd()*60;
+      if(!inY) y += (r===0 ? 1 : -1) * rnd()*50;
+      nodes[c][r] = [x, y];
+    }
+  }
+  /* منتصفات الأضلاع المشتركة (تعرّج إضافي في وسط كل ضلع) */
+  const hMid = {}, vMid = {};
+  for(let c=0; c<COLS; c++) for(let r=0; r<=ROWS; r++){
+    const a = nodes[c][r], b = nodes[c+1][r];
+    let dy;
+    if(r===0) dy = rnd()*55; else if(r===ROWS) dy = -rnd()*55; else dy = (rnd()-.5)*72;
+    hMid[c+","+r] = [(a[0]+b[0])/2 + (rnd()-.5)*50, (a[1]+b[1])/2 + dy];
+  }
+  for(let c=0; c<=COLS; c++) for(let r=0; r<ROWS; r++){
+    const a = nodes[c][r], b = nodes[c][r+1];
+    let dx;
+    if(c===0) dx = rnd()*55; else if(c===COLS) dx = -rnd()*55; else dx = (rnd()-.5)*72;
+    vMid[c+","+r] = [(a[0]+b[0])/2 + dx, (a[1]+b[1])/2 + (rnd()-.5)*50];
+  }
+
+  /* أرضية المدينة (لون الشوارع) على شكل الحدود الخارجية المعوجة */
+  const hull = [];
+  for(let c=0; c<COLS; c++){ hull.push(nodes[c][0], hMid[c+",0"]); }
+  hull.push(nodes[COLS][0]);
+  for(let r=0; r<ROWS; r++){ hull.push(vMid[COLS+","+r], nodes[COLS][r+1]); }
+  for(let c=COLS-1; c>=0; c--){ hull.push(hMid[c+","+ROWS], nodes[c][ROWS]); }
+  for(let r=ROWS-1; r>0; r--){ hull.push(vMid["0,"+r], nodes[0][r]); }
+  hull.push(vMid["0,0"]);
+  map.appendChild(el("polygon", {points:pts(hull), class:"road"}));
+
+  /* خطوط الشوارع المتقطعة على الحدود الداخلية */
+  for(let c=1; c<COLS; c++){
+    const line = [nodes[c][0]];
+    for(let r=0; r<ROWS; r++){ line.push(vMid[c+","+r], nodes[c][r+1]); }
+    map.appendChild(el("polyline", {points:pts(line), class:"dash"}));
+  }
+  for(let r=1; r<ROWS; r++){
+    const line = [nodes[0][r]];
+    for(let c=0; c<COLS; c++){ line.push(hMid[c+","+r], nodes[c+1][r]); }
+    map.appendChild(el("polyline", {points:pts(line), class:"dash"}));
+  }
+
+  /* تدرجات الهالات */
+  const defs = el("defs", {});
+  DISTRICTS.forEach((d, di) => {
+    const grad = el("radialGradient", {id:"g"+di});
+    grad.appendChild(el("stop", {offset:"0%", "stop-color":d.tint, "stop-opacity":"0.72"}));
+    grad.appendChild(el("stop", {offset:"55%", "stop-color":d.tint, "stop-opacity":"0.34"}));
+    grad.appendChild(el("stop", {offset:"100%", "stop-color":d.tint, "stop-opacity":"0.05"}));
+    defs.appendChild(grad);
+  });
+  map.appendChild(defs);
+
+  /* الأحياء */
+  DISTRICTS.forEach((d, di) => {
+    // الحي الأول أعلى اليمين (اتجاه عربي)
+    const col = di % COLS, row = Math.floor(di / COLS);
+    const sc = COLS - 1 - col;
+    const quad = [
+      nodes[sc][row], hMid[sc+","+row], nodes[sc+1][row],
+      vMid[(sc+1)+","+row], nodes[sc+1][row+1],
+      hMid[sc+","+(row+1)], nodes[sc][row+1], vMid[sc+","+row],
+    ];
+    const poly = shrink(quad, 0.94);        // مساحة الحي (يترك شارعًا حوله)
+    const inner = shrink(quad, 0.85);       // حدود بناء المباني
+    const [cx, cy] = centroid(poly);
+
+    const g = el("g", {id:"dist-"+di, class:"zone", tabindex:"0", role:"button", "aria-label":d.name+" — "+d.theme});
+    const zrnd = mulberry32(500 + di*29);
+
+    g.appendChild(el("polygon", {points:pts(poly), class:"base"}));
+
+    /* بلوكات المباني داخل الحي — شبكة تُقصّ على شكل الحي المعوج */
+    const bxs = poly.map(p=>p[0]), bys = poly.map(p=>p[1]);
+    const minX = Math.min(...bxs), maxX = Math.max(...bxs);
+    const minY = Math.min(...bys), maxY = Math.max(...bys);
+    const STEP = 60, CELL = 46;
+    for(let gx = minX+10; gx + CELL < maxX; gx += STEP){
+      for(let gy = minY+10; gy + CELL < maxY; gy += STEP){
+        const corners = [[gx,gy],[gx+CELL,gy],[gx,gy+CELL],[gx+CELL,gy+CELL]];
+        if(!corners.every(p => inPoly(p, inner))) continue;
+        const ccx = gx+CELL/2, ccy = gy+CELL/2;
+        if(Math.hypot(ccx-cx, ccy-cy) < 78) continue; // مساحة المسجد
+        // سطح أو سطحان
+        const split = zrnd();
+        const roofs = [];
+        if(split < 0.4){
+          const w1 = CELL*(0.4+zrnd()*0.2);
+          roofs.push({x:gx, y:gy, w:w1, h:CELL});
+          roofs.push({x:gx+w1+6, y:gy, w:CELL-w1-6, h:CELL});
+        } else if(split < 0.8){
+          const h1 = CELL*(0.4+zrnd()*0.2);
+          roofs.push({x:gx, y:gy, w:CELL, h:h1});
+          roofs.push({x:gx, y:gy+h1+6, w:CELL, h:CELL-h1-6});
+        } else {
+          roofs.push({x:gx, y:gy, w:CELL, h:CELL});
+        }
+        roofs.forEach(r => {
+          g.appendChild(el("rect", {x:r.x.toFixed(1), y:r.y.toFixed(1), width:r.w.toFixed(1), height:r.h.toFixed(1), rx:5, class:"roof"}));
+          if(zrnd() > .45){
+            g.appendChild(el("rect", {
+              x:(r.x + 5 + zrnd()*(Math.max(4,r.w-14))).toFixed(1),
+              y:(r.y + 5 + zrnd()*(Math.max(4,r.h-14))).toFixed(1),
+              width:6, height:6, rx:1.5, class:"ac"
+            }));
+          }
+          const nL = 2 + Math.floor(zrnd()*2);
+          for(let i=0;i<nL;i++){
+            const lamp = el("circle", {
+              cx:(r.x + 7 + zrnd()*(Math.max(4,r.w-14))).toFixed(1),
+              cy:(r.y + 7 + zrnd()*(Math.max(4,r.h-14))).toFixed(1),
+              r:3, class:"lamp"
+            });
+            g.appendChild(lamp);
+            state.districts[di].lamps.push(lamp);
+          }
+        });
+      }
+    }
+
+    /* المعلم: مسجد من الأعلى في مركز الحي */
+    const CW = 100;
+    const mx = cx-CW/2, my = cy-CW/2;
+    g.appendChild(el("rect", {x:mx, y:my, width:CW, height:CW, rx:10, class:"court", transform:`rotate(${(zrnd()-.5)*14} ${cx} ${cy})`}));
+    g.appendChild(el("circle", {cx, cy, r:20, class:"dome"}));
+    g.appendChild(el("path", {d:`M ${cx+4} ${cy-6} a 8 8 0 1 0 0 12`, class:"crescent"}));
+    [[mx+12,my+12],[mx+CW-12,my+12],[mx+12,my+CW-12],[mx+CW-12,my+CW-12]].forEach(p => {
+      g.appendChild(el("circle", {cx:p[0], cy:p[1], r:5, class:"minar"}));
+    });
+
+    /* الهالة فوق الحي */
+    g.appendChild(el("polygon", {points:pts(poly), class:"halo", id:"halo-"+di, fill:"url(#g"+di+")"}));
+
+    /* الاسم */
+    g.appendChild(el("text", {x:cx, y:cy+84, class:"dlabel"})).textContent = d.name;
+    g.appendChild(el("text", {x:cx, y:cy+108, class:"dsub"})).textContent = d.theme;
+    g.appendChild(el("text", {x:cx, y:cy-58, class:"check"})).textContent = "✓";
+
+    g.addEventListener("click", () => openDistrict(di));
+    g.addEventListener("keydown", e => { if(e.key==="Enter"||e.key===" "){ e.preventDefault(); openDistrict(di);} });
+    map.appendChild(g);
+
+    // خلط الأضواء لإضاءة متدرجة عشوائية
+    const lamps = state.districts[di].lamps;
+    for(let i=lamps.length-1;i>0;i--){
+      const j = Math.floor(zrnd()*(i+1));
+      [lamps[i], lamps[j]] = [lamps[j], lamps[i]];
+    }
+  });
+
+  // بوصلة صغيرة بطابع الخريطة
+  const cg = el("g", {});
+  cg.appendChild(el("circle", {cx:760, cy:1170, r:16, class:"compass"}));
+  cg.appendChild(el("text", {x:760, y:1176, class:"compass-t"})).textContent = "ش";
+  map.appendChild(cg);
+})();
+
+/* ─────────── الأزرار السفلية ─────────── */
+const chipsBox = document.getElementById("chips");
+DISTRICTS.forEach((d, di) => {
+  const chip = document.createElement("button");
+  chip.className = "chip";
+  chip.id = "chip-"+di;
+  chip.innerHTML = `<span>${d.name}</span><span class="dots">${'<span class="dot"></span>'.repeat(3)}</span>`;
+  chip.addEventListener("click", () => openDistrict(di));
+  chipsBox.appendChild(chip);
+});
+
+/* ─────────── ورقة السؤال ─────────── */
+const scrim = document.getElementById("scrim");
+const sheet = document.getElementById("sheet");
+const qTag = document.getElementById("qTag");
+const qNum = document.getElementById("qNum");
+const qText = document.getElementById("qText");
+const qOpts = document.getElementById("qOpts");
+const qVerdict = document.getElementById("qVerdict");
+const qNext = document.getElementById("qNext");
+const toast = document.getElementById("toast");
+let toastTimer;
+
+function showToast(msg){
+  toast.textContent = msg;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(()=>toast.classList.remove("show"), 2400);
+}
+
+function openDistrict(di){
+  const ds = state.districts[di];
+  const qi = ds.results.length;
+  if(qi >= 3){
+    showToast(ds.correct===3 ? "هذا الحي أشرق بالكامل ☀️" : "انتهت أسئلة هذا الحي");
+    return;
+  }
+  state.current = {di, qi};
+  const d = DISTRICTS[di];
+  const q = d.questions[qi];
+  qTag.textContent = d.name + " · " + d.theme;
+  qTag.style.background = d.tint;
+  qNum.textContent = `سؤال ${qi+1} من 3`;
+  qText.textContent = q.q;
+  qVerdict.className = "verdict";
+  qVerdict.innerHTML = "";
+  qNext.classList.remove("show");
+  qOpts.innerHTML = "";
+  q.o.forEach((opt, oi) => {
+    const b = document.createElement("button");
+    b.className = "opt";
+    b.textContent = opt;
+    b.addEventListener("click", () => answer(oi, b));
+    qOpts.appendChild(b);
+  });
+  scrim.classList.add("open");
+  sheet.classList.add("open");
+}
+
+function closeSheet(){
+  scrim.classList.remove("open");
+  sheet.classList.remove("open");
+  state.current = null;
+}
+
+document.getElementById("qClose").addEventListener("click", closeSheet);
+scrim.addEventListener("click", closeSheet);
+
+function answer(oi, btn){
+  const {di, qi} = state.current;
+  const d = DISTRICTS[di];
+  const q = d.questions[qi];
+  const correct = oi === q.a;
+
+  [...qOpts.children].forEach((b, i) => {
+    b.disabled = true;
+    if(i === q.a) b.classList.add("right");
+    else if(b === btn && !correct) b.classList.add("wrong");
+  });
+
+  const ds = state.districts[di];
+  ds.results.push(correct);
+  state.answered++;
+  if(correct){ state.score += 10; ds.correct++; lightUp(di, ds.correct); }
+
+  qVerdict.className = "verdict show " + (correct ? "good" : "bad");
+  qVerdict.innerHTML = `<b>${correct ? (state.districts[di].correct===3 ? "✔ إجابة صحيحة — أشرق الصبح على الحي! ☀️" : "✔ إجابة صحيحة — اقترب الفجر في الحي!") : "✘ إجابة غير صحيحة"}</b>${q.why}`;
+  qNext.classList.add("show");
+  updateHud();
+  updateChip(di);
+}
+
+qNext.addEventListener("click", () => {
+  const {di} = state.current;
+  closeSheet();
+  const ds = state.districts[di];
+  if(state.answered >= TOTAL_Q){
+    setTimeout(showFinale, 900);
+  } else if(ds.results.length < 3){
+    setTimeout(() => openDistrict(di), 420);
+  }
+});
+
+/* ─────────── الإضاءة ─────────── */
+function lightUp(di, stage){
+  const g = document.getElementById("dist-"+di);
+  const halo = document.getElementById("halo-"+di);
+  const lamps = state.districts[di].lamps;
+
+  g.classList.remove("s1","s2","s3");
+  g.classList.add("s"+stage);
+
+  if(stage < 3){
+    // فجر تدريجي: تشتعل أضواء ثلث الحي
+    const per = Math.ceil(lamps.length / 3);
+    const from = (stage-1)*per, to = Math.min(stage*per, lamps.length);
+    for(let i=from;i<to;i++){
+      setTimeout(() => lamps[i].classList.add("lit"), (i-from)*36);
+    }
+    halo.style.opacity = stage === 1 ? "0.45" : "0.75";
+  } else {
+    // أشرق الصبح: النهار يغني عن الأضواء والهالة
+    halo.style.opacity = "0";
+  }
+}
+
+function updateHud(){
+  document.getElementById("mScore").textContent = state.score;
+  document.getElementById("mQ").textContent = state.answered + "/" + TOTAL_Q;
+  const full = state.districts.filter(d => d.correct === 3).length;
+  document.getElementById("mLit").textContent = full + "/" + DISTRICTS.length;
+}
+
+function updateChip(di){
+  const ds = state.districts[di];
+  const chip = document.getElementById("chip-"+di);
+  const dots = chip.querySelectorAll(".dot");
+  ds.results.forEach((ok, i) => dots[i].classList.add(ok ? "ok" : "no"));
+  if(ds.correct === 3) chip.classList.add("full");
+}
+
+/* ─────────── النهاية ─────────── */
+function showFinale(){
+  const totalCorrect = state.districts.reduce((s,d)=>s+d.correct,0);
+  const pct = Math.round(totalCorrect / TOTAL_Q * 100);
+  const fEmoji = document.getElementById("fEmoji");
+  const fTitle = document.getElementById("fTitle");
+  const fMsg = document.getElementById("fMsg");
+  document.getElementById("fScore").textContent = state.score + " نقطة";
+  if(pct === 100){ fEmoji.textContent="☀️"; fTitle.textContent="أشرقت المدينة كاملة!"; fMsg.textContent="وعيٌ يطرد الظلام — أنت حصن أمام الشائعات والتضليل."; }
+  else if(pct >= 70){ fEmoji.textContent="🌅"; fTitle.textContent="الفجر عمّ أغلب المدينة!"; fMsg.textContent=`أجبت على ${totalCorrect} من ${TOTAL_Q} بشكل صحيح — وعيك عالٍ، وبقيت أحياء تنتظر شروقها.`; }
+  else if(pct >= 40){ fEmoji.textContent="🌄"; fTitle.textContent="بداية شروق طيبة"; fMsg.textContent=`أشرق ${totalCorrect} من ${TOTAL_Q} — راجع التوضيحات وأعد المحاولة ليعم الصباح.`; }
+  else { fEmoji.textContent="🌙"; fTitle.textContent="المدينة ما زالت نائمة!"; fMsg.textContent="لا بأس — كل توضيح قرأته في اللعبة خيط فجر جديد. أعد المحاولة وأيقظ المدينة."; }
+  document.getElementById("finale").classList.add("open");
+}
+
+document.getElementById("fAgain").addEventListener("click", () => location.reload());
+</script>
+</body>
+</html>
