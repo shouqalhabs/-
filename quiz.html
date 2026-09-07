@@ -1,0 +1,359 @@
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>مسابقة اليوم الوطني 95</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Arabic:wght@400;700&display=swap" rel="stylesheet">
+<style>
+    :root {
+      --primary-green: #005432;
+      --secondary-gold: #A08A58;
+      --correct-green: #28a745;
+      --wrong-red: #dc3545;
+      --light-bg: #f8f9fa;
+      --dark-text: #333;
+      --light-text: #fff;
+      --border-color: #e0e0e0;
+      --map-default-fill: #E0E0E0;
+      --map-hover-fill: #b0b0b0;
+    }
+    *, *:before, *:after { box-sizing: border-box; }
+    body { font-family: 'IBM Plex Sans Arabic', sans-serif; background: var(--light-bg); color: var(--dark-text); margin: 0;  center; align-items: center; min-height: 100vh; text-align: center; line-height: 1.7; }
+    .container { width: 100%;   background: var(--light-text); border-radius: 15px; box-shadow: 0 6px 25px rgba(0,0,0,.1); padding: 30px 40px; border-top: 10px solid var(--primary-green); }
+    h1, h2, h3 { color: var(--primary-green); font-weight: 700; }
+    h1 { font-size: 2.2rem; margin-bottom: 5px; }
+    .hidden { display: none; }
+    .btn { background: var(--primary-green); color: #fff; border: none; padding: 15px 30px; font-size: 1.2rem; font-family: inherit; font-weight: 700; border-radius: 10px; cursor: pointer; transition: background-color .3s; margin-top: 20px; }
+    .btn:hover { background: #004428; }
+    .logo-container img { max-width: 200px; margin-bottom: 20px; }
+    #map-container { position: relative; min-height: 700px; direction: ltr; }
+    #map-container svg { width: 100%; height: auto; display: block; overflow: visible; filter: drop-shadow(0 6px 0 #cbcbcb) drop-shadow(0 12px 0 #b0b0b0) drop-shadow(0 26px 20px rgba(0,0,0,.28)); }
+    #map-container svg *[id^="SA-"] { cursor: pointer; }
+    #map-container svg g[id^="SA-"], #map-container svg path[id^="SA-"] { transform-box: fill-box; transform-origin: center; transition: transform .25s ease, filter .25s ease; }
+    #map-container svg g[id^="SA-"] path, #map-container svg path[id^="SA-"] { fill: var(--map-default-fill); stroke: #A0A0A0; stroke-width: 1.2px; transition: fill .25s ease; }
+    #map-container svg g[id^="SA-"]:hover, #map-container svg path[id^="SA-"]:hover { transform: translateY(-9px); filter: drop-shadow(0 10px 9px rgba(0,0,0,.35)); }
+    #map-container svg g[id^="SA-"]:hover path, #map-container svg path[id^="SA-"]:hover { fill: var(--map-hover-fill); }
+    #map-container [data-status] { cursor: not-allowed; pointer-events: none; }
+    #map-container [data-status="pending"] path, #map-container [data-status="pending"] { fill: var(--map-hover-fill) !important; }
+    #map-container [data-status="correct"] path, #map-container [data-status="correct"] { fill: var(--correct-green) !important; }
+    #map-container svg [data-status="correct"] { transform: translateY(-7px); }
+    #map-container [data-status="wrong"] path, #map-container [data-status="wrong"] { fill: var(--wrong-red) !important; }
+    #game-status { margin: 20px 0; padding: 15px; background: #e9ecef; border-radius: 8px; }
+    #game-status p { margin: 0; font-size: 1.2rem; font-weight: 700; color: #495057; }
+    #progress-bar-container { background: #ddd; border-radius: 20px; padding: 3px; margin-top: 10px; }
+    #progress-bar { height: 15px; width: 0%; background: var(--primary-green); border-radius: 20px; transition: width .5s; }
+    /* ── بطاقة السؤال (بنمط 7.html) ── */
+    #quiz-scrim { position: fixed; inset: 0; z-index: 9998; background: rgba(27,36,48,.4); backdrop-filter: blur(3px); opacity: 0; pointer-events: none; transition: opacity .28s ease; }
+    #quiz-scrim.open { opacity: 1; pointer-events: auto; }
+    #quiz-modal {
+      position: fixed; z-index: 9999; left: 50%; top: 50%; translate: -50% -50%;
+      width: min(560px, 86vw); max-height: 88vh; overflow: hidden auto;
+      background: #fff; border: 1px solid var(--border-color); border-radius: 22px;
+      box-shadow: 0 30px 70px rgba(27,36,48,.22);
+      padding: 20px clamp(16px,3vw,28px) 24px;
+      opacity: 0; transform: translateY(12px) scale(.98); pointer-events: none;
+      transition: opacity .28s ease, transform .34s cubic-bezier(.22,.72,.24,1);
+      direction: rtl; text-align: right;
+    }
+    #quiz-modal.open { opacity: 1; transform: none; pointer-events: auto; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 16px; }
+    .q-tag { font-size: 11.5px; letter-spacing: 1px; font-weight: 700; padding: 6px 13px; border-radius: 999px; color: #fff; background: var(--primary-green); }
+    .q-close { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--border-color); background: #fff; cursor: pointer; color: #7C838C; font-size: 16px; line-height: 1; padding: 0; }
+    .q-close:hover { color: var(--dark-text); border-color: #7C838C; }
+    .qwrap { position: relative; }
+    #question { font-size: clamp(18px,3.4vw,23px); font-weight: 700; line-height: 1.65; margin: 0 0 16px; color: var(--dark-text); }
+    .q-stamp {
+      position: absolute; left: 50%; top: 50%; translate: -50% -50%;
+      --st: min(172px,54vw); width: var(--st); aspect-ratio: 1; border-radius: 50%;
+      display: grid; place-content: center; justify-items: center; gap: 1px;
+      border: 3.5px solid currentColor; background: rgba(255,255,255,.52);
+      color: var(--correct-green); opacity: .95; transform: rotate(-13deg); pointer-events: none;
+    }
+    .q-stamp[hidden] { display: none; }
+    .q-stamp::before { content: ""; position: absolute; inset: 6px; border-radius: 50%; border: 2px solid currentColor; opacity: .5; }
+    .q-stamp b { font-size: calc(var(--st) * .19); line-height: 1; }
+    .q-stamp i { font-style: normal; font-weight: 700; font-size: calc(var(--st) * .125); letter-spacing: .3px; line-height: 1.2; }
+    .q-stamp.no { color: var(--wrong-red); }
+    .q-stamp.press { animation: q-press .42s cubic-bezier(.2,.85,.3,1) both; }
+    .q-stamp.fade { animation: q-fade .5s ease both; }
+    @keyframes q-fade {
+      from { opacity: .95; }
+      to { opacity: 0; transform: rotate(-13deg) scale(.9); }
+    }
+    @keyframes q-press {
+      0% { transform: rotate(-30deg) scale(1.55); opacity: 0; }
+      55% { opacity: 1; }
+      100% { transform: rotate(-13deg) scale(1); opacity: .95; }
+    }
+    #options-container { display: grid; gap: 10px; }
+    .option-btn {
+      display: flex; align-items: center; gap: 12px; width: 100%; text-align: start;
+      padding: 14px; border-radius: 14px; cursor: pointer; background: #fff;
+      border: 1.5px solid var(--border-color); font-size: 15px; line-height: 1.5; font-family: inherit; color: var(--dark-text);
+      transition: border-color .18s ease, background .18s ease, transform .14s ease;
+    }
+    .option-btn:hover:not(:disabled) { border-color: var(--dark-text); transform: translateX(-3px); }
+    .option-btn:disabled { cursor: default; }
+    .option-btn .key {
+      flex: 0 0 28px; height: 28px; border-radius: 9px; display: grid; place-items: center;
+      border: 1.5px solid var(--border-color); font-size: 13px; color: #7C838C;
+    }
+    #question, .option-btn { direction: rtl; unicode-bidi: isolate; }
+    .option-btn.correct { border-color: var(--correct-green) !important; background: #F1F9F5 !important; }
+    .option-btn.correct .key { border-color: var(--correct-green); color: var(--correct-green); }
+    .option-btn.wrong { border-color: var(--wrong-red) !important; background: #FDF2F1 !important; }
+    .option-btn.wrong .key { border-color: var(--wrong-red); color: var(--wrong-red); }
+    .q-verdict { margin-top: 18px; display: none; font-size: 17px; font-weight: 700; }
+    .q-verdict.show { display: block; }
+    .q-verdict.good { color: var(--correct-green); }
+    .q-verdict.bad { color: var(--wrong-red); }
+    #result-container h3 { font-size: 1.8rem; }
+
+    /* قد تحتاج لإضافة بعض التنسيقات الخاصة بنموذج Formidable هنا إذا احتجت */
+    .frm_forms { margin-top: 25px !important; }
+
+    @media (max-width: 768px) {
+      #map-container { min-height: 0; }
+    }
+</style>
+
+<div class="container">
+  <div id="welcome-screen">
+    <h1>مسابقة خارطة الوطن</h1>
+    <p>أجب على  أسئلة عن وطننا الغالي للتأهل للسحب!</p>
+    <button id="start-btn" class="btn">ابدأ المسابقة</button>
+  </div>
+
+  <div id="game-area" class="hidden">
+    <div id="game-status"><p id="status-text"></p><div id="progress-bar-container"><div id="progress-bar"></div></div></div>
+    <div id="map-container"></div>
+    <div id="quiz-scrim"></div>
+    <div id="quiz-modal" role="dialog" aria-modal="true" aria-labelledby="question">
+      <div class="card-head">
+        <span class="q-tag" id="q-tag"></span>
+        <button class="q-close" id="q-close" aria-label="إغلاق">✕</button>
+      </div>
+      <div class="qwrap">
+        <h2 id="question"></h2>
+      </div>
+      <span class="q-stamp" id="q-stamp" hidden><b>✓</b><i>صحيح</i></span>
+      <div id="options-container"></div>
+      <div class="q-verdict" id="q-verdict" aria-live="polite"></div>
+    </div>
+  </div>
+
+  <div id="result-container" class="hidden">
+    <div id="congrats-message" class="hidden">
+        <h3>مبــروك! لقد تأهلت للسحب</h3>
+        <p id="final-score-win"></p>
+        <!-- سيقوم ووردبريس بتحويل هذا الكود القصير إلى نموذج كامل -->
+        [formidable id=6]
+    </div>
+    <div id="fail-message" class="hidden">
+        <h3>حظاً أوفر في المرة القادمة</h3>
+        <p id="final-score-fail"></p>
+        <button onclick="location.reload()" class="btn">إعادة المحاولة</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // تم حذف متغير `registrationForm` من هنا
+  const welcomeScreen=document.getElementById('welcome-screen'),startBtn=document.getElementById('start-btn'),gameArea=document.getElementById('game-area'),mapContainer=document.getElementById('map-container'),quizModal=document.getElementById('quiz-modal'),quizScrim=document.getElementById('quiz-scrim'),qTag=document.getElementById('q-tag'),qClose=document.getElementById('q-close'),qStamp=document.getElementById('q-stamp'),qVerdict=document.getElementById('q-verdict'),statusText=document.getElementById('status-text'),progressBar=document.getElementById('progress-bar'),questionEl=document.getElementById('question'),optionsContainer=document.getElementById('options-container'),resultContainer=document.getElementById('result-container'),congratsMessage=document.getElementById('congrats-message'),failMessage=document.getElementById('fail-message');
+
+  const TOTAL_QUESTIONS=13,PASSING_SCORE=13;
+  let answeredCount=0,correctAnswers=0,currentRegion=null,isFirstAttempt=true,currentQuestionData=null;
+
+  const questionBank = [
+    { q: "يوافق اليوم الوطني السعودي من كل عام", a: "23 سبتمبر", o: ["20 سبتمبر", "21 سبتمبر", "23 سبتمبر"] },
+    { q: "متى يوافق يوم التأسيس", a: "22 فبراير", o: ["20 فبراير", "22 فبراير", "23 فبراير"] },
+    { q: "مناسبة وطنية تحتفل بها المملكة العربية السعودية في 11 مارس من كل عام", a: "يوم العلم", o: ["يوم العلم", "اليوم الوطني", "يوم التأسيس"] },
+    { q: "ما الاسم الذي كان يطلق على المملكة العربية السعودية قبل توحيدها", a: "مملكة نجد والحجاز وملحقاتها", o: ["مملكة نجد والحجاز وملحقاتها", "مملكة نجد", "مملكة الحجاز"] },
+    { q: "ماهي الصفة التي يتميز بها علم المملكة العربية السعودية عن بقية أعلام الدول", a: "لا يتم تنكيسه أبداً", o: ["لونه أخضر", "لا يتم تنكيسه أبداً", "وجود علامة السيفين على شعاره"] },
+    { q: "من هو أول ملك سعودي دعا إلى التضامن الإسلامي", a: "الملك فيصل", o: ["الملك عبدالعزيز", "الملك سعود", "الملك فيصل"] },
+    { q: "ما هو ترتيب المملكة العربية السعودية بين دول العالم من حيث المساحة", a: "المرتبة 12", o: ["المرتبة 12", "المرتبة 20", "المرتبة 30"] },
+    { q: "كم عام استغرق الملك عبدالعزيز إلى أن تمكن من توحيد وتأسيس المملكة", a: "31 عام", o: ["10 أعوام", "31 عام", "40 عام"] },
+    { q: "ما هي عاصمة المملكة العربية السعودية", a: "الرياض", o: ["المدينة المنورة", "الرياض", "مكة المكرمة"] },
+    { q: "كم عام مضى على توحيد المملكة العربية السعودية", a: "95 عام", o: ["65 عام", "75 عام", "95 عام"] },
+    { q: "في أي عام توفي الملك عبدالعزيز", a: "1373هـ", o: ["1373هـ", "1383هـ", "1393هـ"] },
+    { q: "كم عدد مناطق المملكة العربية السعودية", a: "13", o: ["13", "15", "20"] },
+    { q: "أسس الإمام تركي بن عبدالله الدولة السعودية", a: "الثانية", o: ["الأولى", "الثانية", "الثالثة"] }
+  ];
+
+  let allQuestions = [];
+
+  function setupAllQuestions() {
+    allQuestions = [...questionBank];
+    allQuestions.sort(() => Math.random() - 0.5);
+  }
+
+  startBtn.addEventListener('click', startGame);
+
+  function startGame() {
+    setupAllQuestions();
+    answeredCount = 0;
+    correctAnswers = 0;
+    welcomeScreen.classList.add('hidden');
+    resultContainer.classList.add('hidden');
+    failMessage.classList.add('hidden');
+    congratsMessage.classList.add('hidden');
+    gameArea.classList.remove('hidden');
+    closeQuiz();
+    loadMap();
+  }
+
+  function loadMap() {
+    statusText.textContent = "جاري تحميل الخريطة...";
+    const existingSvg = mapContainer.querySelector('svg');
+    if (existingSvg) existingSvg.remove();
+    fetch("https://www.amcharts.com/lib/3/maps/svg/saudiArabiaHigh.svg").then(r => r.text()).then(svgText => {
+      mapContainer.insertAdjacentHTML('afterbegin', svgText);
+      const svg = mapContainer.querySelector('svg');
+      if (!svg) throw new Error('SVG not found');
+      svg.removeAttribute('width'); svg.removeAttribute('height'); svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+      // إطار العرض مضبوط على حدود الرسمة الفعلية حتى تتوسط الخريطة
+      svg.setAttribute('viewBox', '-10 -10 750 620');
+      const regionNodes = Array.from(svg.querySelectorAll('g[id^="SA-"], path[id^="SA-"]'));
+      regionNodes.forEach(node => {
+        node.addEventListener('click', onRegionClick);
+      });
+      updateProgress();
+      statusText.textContent = "اختر منطقة من الخريطة لبدء السؤال...";
+    }).catch(() => { statusText.textContent = 'تعذر تحميل الخريطة.'; });
+  }
+
+  function onRegionClick(e) {
+    const regionNode = e.currentTarget;
+    if (!regionNode || regionNode.dataset.status || answeredCount >= TOTAL_QUESTIONS) return;
+    currentRegion = regionNode;
+    setStatus(regionNode, 'pending');
+    isFirstAttempt = true;
+    showRandomQuestion();
+  }
+
+  function setStatus(node, status) {
+    if (status) { node.setAttribute('data-status', status); } else { node.removeAttribute('data-status'); }
+  }
+
+  function showRandomQuestion() {
+    if (allQuestions.length === 0) {
+        showResult();
+        return;
+    }
+    currentQuestionData = allQuestions.pop();
+    qTag.textContent = `سؤال ${answeredCount + 1} من ${TOTAL_QUESTIONS}`;
+    questionEl.innerHTML = currentQuestionData.q;
+    clearTimeout(stampTimer);
+    qStamp.hidden = true;
+    qStamp.classList.remove('press', 'fade', 'no');
+    qVerdict.className = 'q-verdict';
+    qVerdict.textContent = '';
+    optionsContainer.innerHTML = '';
+    const keys = ['أ', 'ب', 'ج', 'د'];
+    [...currentQuestionData.o].sort(() => Math.random() - 0.5).forEach((opt, n) => {
+      const btn = document.createElement('button');
+      btn.className = 'option-btn';
+      btn.innerHTML = `<span class="key">${keys[n]}</span><span>${opt}</span>`;
+      btn.onclick = function() {
+          handleAnswer(this, String(opt) === String(currentQuestionData.a));
+      };
+      optionsContainer.appendChild(btn);
+    });
+    quizScrim.classList.add('open');
+    quizModal.classList.add('open');
+  }
+
+  function closeQuiz() {
+    quizScrim.classList.remove('open');
+    quizModal.classList.remove('open');
+  }
+
+  // إغلاق البطاقة قبل الإجابة: تعود المنطقة والسؤال كما كانا
+  function cancelQuestion() {
+    if (!currentRegion || currentRegion.dataset.status !== 'pending') return;
+    setStatus(currentRegion, null);
+    if (currentQuestionData) allQuestions.push(currentQuestionData);
+    currentRegion = null;
+    currentQuestionData = null;
+    closeQuiz();
+  }
+
+  qClose.addEventListener('click', cancelQuestion);
+  quizScrim.addEventListener('click', cancelQuestion);
+
+  let stampTimer = null;
+
+  // إظهار الختم: أخضر «صحيح» أو أحمر «خطأ»
+  function showStamp(correct) {
+    clearTimeout(stampTimer);
+    qStamp.classList.remove('press', 'fade');
+    qStamp.classList.toggle('no', !correct);
+    qStamp.querySelector('b').textContent = correct ? '✓' : '✕';
+    qStamp.querySelector('i').textContent = correct ? 'صحيح' : 'خطأ';
+    qStamp.hidden = false;
+    void qStamp.offsetWidth;
+    qStamp.classList.add('press');
+  }
+
+  function handleAnswer(clickedButton, isCorrect) {
+    const rightAnswer = currentQuestionData.a;
+    if (isCorrect) {
+      if (isFirstAttempt) {
+        correctAnswers++;
+      }
+      answeredCount++;
+      Array.from(optionsContainer.children).forEach(btn => {
+        btn.disabled = true;
+        if (btn.lastChild.textContent === rightAnswer) {
+          btn.classList.add('correct');
+        }
+      });
+      clickedButton.classList.add('correct');
+      showStamp(true);
+      qVerdict.textContent = 'إجابة صحيحة!';
+      qVerdict.className = 'q-verdict show good';
+      setStatus(currentRegion, 'correct');
+      updateProgress();
+      setTimeout(() => {
+        closeQuiz();
+        if (answeredCount >= TOTAL_QUESTIONS) {
+          showResult();
+        }
+      }, 1500);
+    } else {
+      isFirstAttempt = false;
+      clickedButton.classList.add('wrong');
+      clickedButton.disabled = true;
+      showStamp(false);
+      // الختم الأحمر يظهر لحظة ثم يختفي حتى يعيد المستخدم المحاولة
+      stampTimer = setTimeout(() => {
+        qStamp.classList.remove('press');
+        qStamp.classList.add('fade');
+        stampTimer = setTimeout(() => {
+          qStamp.hidden = true;
+          qStamp.classList.remove('fade', 'no');
+        }, 500);
+      }, 900);
+      qVerdict.textContent = 'إجابة خاطئة، حاول مرة أخرى.';
+      qVerdict.className = 'q-verdict show bad';
+    }
+  }
+
+  function updateProgress() {
+    const pct = (answeredCount / TOTAL_QUESTIONS) * 100;
+    progressBar.style.width = pct + '%';
+    statusText.textContent = `أكملت ${answeredCount} من ${TOTAL_QUESTIONS} سؤال.` + (answeredCount < TOTAL_QUESTIONS ? ' اختر منطقة جديدة!' : ' اكتملت المسابقة!');
+  }
+
+  function showResult() {
+    gameArea.classList.add('hidden');
+    resultContainer.classList.remove('hidden');
+    failMessage.classList.add('hidden');
+    congratsMessage.classList.remove('hidden');
+    document.getElementById('final-score-win').textContent = `رائع! لقد أكملت التحدي.`;
+  }
+
+  document.querySelector('#fail-message .btn').addEventListener('click', startGame);
+
+  // تم حذف دالة `handleFormSubmit` ورابط الحدث `addEventListener` من هنا
+</script>
