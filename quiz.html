@@ -253,7 +253,7 @@
     [...currentQuestionData.o].sort(() => Math.random() - 0.5).forEach((opt, n) => {
       const btn = document.createElement('button');
       btn.className = 'option-btn';
-      btn.innerHTML = `<span class="key">${keys[n]}<span></span>${opt}`</span>;
+      btn.innerHTML = `<span class="key">${keys[n]}</span><span>${opt}</span>`;
       btn.onclick = function() {
           handleAnswer(this, String(opt) === String(currentQuestionData.a));
       };
@@ -357,4 +357,3 @@
 
   // تم حذف دالة `handleFormSubmit` ورابط الحدث `addEventListener` من هنا
 </script>
- 
